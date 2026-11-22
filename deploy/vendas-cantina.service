@@ -1,15 +1,15 @@
 [Unit]
-Description=Memoria em Duelo web application
+Description=CaixaFacil cantina sales application
 After=network.target
 
 [Service]
 Type=simple
 User=ubuntu
-WorkingDirectory=/opt/memoria-em-duelo
+WorkingDirectory=/opt/vendas-cantina
 Environment=NODE_ENV=production
 Environment=PORT=3001
-Environment=DB_PATH=/var/lib/memoria-em-duelo/memoria.db
-EnvironmentFile=/etc/memoria-em-duelo.env
+Environment=DB_PATH=/var/lib/vendas-cantina/vendas.db
+EnvironmentFile=/etc/vendas-cantina.env
 ExecStart=/usr/bin/npm start
 Restart=on-failure
 RestartSec=5

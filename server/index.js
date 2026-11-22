@@ -12,5 +12,5 @@ if (!jwtSecret) {
 }
 
 app.listen(port, '0.0.0.0', () => {
-  console.log(`Memória em Duelo disponível na porta ${port}.`);
+  console.log(`Sistema de vendas da cantina disponível na porta ${port}.`);
 });

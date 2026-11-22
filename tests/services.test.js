@@ -16,7 +16,20 @@ async function register(name, email) {
   return response.body;
 }
 
-describe('serviços do jogo da memória', () => {
+async function createProduct(token, overrides = {}) {
+  return request(app)
+    .post('/api/products')
+    .set('Authorization', `Bearer ${token}`)
+    .send({
+      name: 'Suco natural',
+      unit: 'un',
+      priceCents: 750,
+      stock: 5,
+      ...overrides,
+    });
+}
+
+describe('serviços do sistema de vendas', () => {
   beforeEach(() => {
     db = createDatabase(':memory:');
     app = createApp({ db, jwtSecret });
@@ -24,16 +37,18 @@ describe('serviços do jogo da memória', () => {
 
   afterEach(() => db.close());
 
-  it('cadastra, autentica e retorna os dados do usuário sem expor a senha', async () => {
-    const created = await register('Ana Silva', 'ANA@example.com');
-    assert.equal(created.user.email, 'ana@example.com');
-    assert.equal(Object.hasOwn(created.user, 'password_hash'), false);
-    assert.equal(Object.hasOwn(created.user, 'password'), false);
+  it('cadastra usuário administrador inicial e operadores, com senha protegida', async () => {
+    const admin = await register('Ana Silva', 'ANA@example.com');
+    const operator = await register('Bia Costa', 'bia@example.com');
+    assert.equal(admin.user.role, 'admin');
+    assert.equal(operator.user.role, 'operador');
+    assert.equal(Object.hasOwn(admin.user, 'password_hash'), false);
 
     const login = await request(app)
       .post('/api/auth/login')
       .send({ email: 'ana@example.com', password: 'senha-segura-123' });
     assert.equal(login.status, 200);
+    assert.equal(login.body.user.role, 'admin');
 
     const profile = await request(app)
       .get('/api/me')
@@ -42,93 +57,142 @@ describe('serviços do jogo da memória', () => {
     assert.equal(profile.body.user.name, 'Ana Silva');
   });
 
-  it('valida cadastro, senha e autenticação obrigatória', async () => {
-    const invalid = await request(app)
-      .post('/api/auth/register')
-      .send({ name: 'A', email: 'invalido', password: '123' });
-    assert.equal(invalid.status, 400);
+  it('exige autenticação e restringe cadastros ao administrador', async () => {
+    const unauthorized = await request(app).get('/api/products');
+    assert.equal(unauthorized.status, 401);
 
-    await register('Ana Silva', 'ana@example.com');
-    const duplicate = await request(app)
-      .post('/api/auth/register')
-      .send({ name: 'Ana', email: 'ANA@example.com', password: 'senha-segura-123' });
-    assert.equal(duplicate.status, 409);
-
-    const wrongPassword = await request(app)
-      .post('/api/auth/login')
-      .send({ email: 'ana@example.com', password: 'senha-errada' });
-    assert.equal(wrongPassword.status, 401);
-
-    const privateHistory = await request(app).get('/api/games/history');
-    assert.equal(privateHistory.status, 401);
-  });
-
-  it('registra uma partida concluída e calcula pontuação, histórico e ranking', async () => {
-    const { token, user } = await register('Bia Costa', 'bia@example.com');
-    const started = await request(app)
-      .post('/api/games')
-      .set('Authorization', `Bearer ${token}`)
-      .send({ difficulty: 'medio' });
-    assert.equal(started.status, 201);
-    assert.equal(started.body.game.pairs, 8);
-
-    const impossibleResult = await request(app)
-      .post(`/api/games/${started.body.game.id}/complete`)
-      .set('Authorization', `Bearer ${token}`)
-      .send({ moves: 7, elapsedSeconds: 75 });
-    assert.equal(impossibleResult.status, 400);
-
-    const completed = await request(app)
-      .post(`/api/games/${started.body.game.id}/complete`)
-      .set('Authorization', `Bearer ${token}`)
-      .send({ moves: 20, elapsedSeconds: 75 });
-    assert.equal(completed.status, 200);
-    assert.deepEqual(completed.body.result, {
-      gameId: started.body.game.id,
-      moves: 20,
-      elapsedSeconds: 75,
-      score: 525,
-    });
-
-    const history = await request(app)
-      .get('/api/games/history')
-      .set('Authorization', `Bearer ${token}`);
-    assert.equal(history.body.games.length, 1);
-    assert.equal(history.body.games[0].score, 525);
-
-    const ranking = await request(app)
-      .get('/api/leaderboard')
-      .set('Authorization', `Bearer ${token}`);
-    assert.deepEqual(ranking.body.players[0], {
-      name: user.name,
-      score: 525,
-      difficulty: 'medio',
-    });
-
-    const duplicateCompletion = await request(app)
-      .post(`/api/games/${started.body.game.id}/complete`)
-      .set('Authorization', `Bearer ${token}`)
-      .send({ moves: 20, elapsedSeconds: 75 });
-    assert.equal(duplicateCompletion.status, 409);
-  });
-
-  it('impede que uma pessoa conclua ou consulte partidas de outra', async () => {
-    const owner = await register('Caio Lima', 'caio@example.com');
-    const other = await register('Duda Reis', 'duda@example.com');
-    const started = await request(app)
-      .post('/api/games')
-      .set('Authorization', `Bearer ${owner.token}`)
-      .send({ difficulty: 'facil' });
-
-    const forbidden = await request(app)
-      .post(`/api/games/${started.body.game.id}/complete`)
-      .set('Authorization', `Bearer ${other.token}`)
-      .send({ moves: 12, elapsedSeconds: 60 });
+    const admin = await register('Ana Silva', 'ana@example.com');
+    const operator = await register('Bia Costa', 'bia@example.com');
+    const forbidden = await createProduct(operator.token);
     assert.equal(forbidden.status, 403);
 
-    const otherHistory = await request(app)
-      .get('/api/games/history')
-      .set('Authorization', `Bearer ${other.token}`);
-    assert.deepEqual(otherHistory.body.games, []);
+    const created = await createProduct(admin.token);
+    assert.equal(created.status, 201);
+    assert.equal(created.body.product.priceCents, 750);
+  });
+
+  it('atualiza produtos e clientes e protege itens usados em vendas', async () => {
+    const admin = await register('Ana Silva', 'ana@example.com');
+    const productResponse = await createProduct(admin.token);
+    const productId = productResponse.body.product.id;
+    const updatedProduct = await request(app)
+      .put(`/api/products/${productId}`)
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send({ name: 'Suco integral', unit: 'garrafa', priceCents: 900, stock: 7 });
+    assert.equal(updatedProduct.status, 200);
+    assert.equal(updatedProduct.body.product.name, 'Suco integral');
+
+    const clientResponse = await request(app)
+      .post('/api/clients')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send({ name: 'Carlos Lima' });
+    const updatedClient = await request(app)
+      .put(`/api/clients/${clientResponse.body.client.id}`)
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send({ name: 'Carlos Lima', phone: '85999999999', email: 'carlos@example.com' });
+    assert.equal(updatedClient.status, 200);
+    assert.equal(updatedClient.body.client.email, 'carlos@example.com');
+
+    await request(app)
+      .post('/api/sales')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send({ paymentMethod: 'avista', items: [{ productId, quantity: 1 }] })
+      .expect(201);
+    const protectedDelete = await request(app)
+      .delete(`/api/products/${productId}`)
+      .set('Authorization', `Bearer ${admin.token}`);
+    assert.equal(protectedDelete.status, 409);
+
+    const unusedProduct = await createProduct(admin.token, { name: 'Água mineral' });
+    const deleted = await request(app)
+      .delete(`/api/products/${unusedProduct.body.product.id}`)
+      .set('Authorization', `Bearer ${admin.token}`);
+    assert.equal(deleted.status, 204);
+  });
+
+  it('registra venda à vista, baixa estoque e produz relatório por cliente', async () => {
+    const admin = await register('Ana Silva', 'ana@example.com');
+    const productResponse = await createProduct(admin.token);
+    const productId = productResponse.body.product.id;
+    const clientResponse = await request(app)
+      .post('/api/clients')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send({ name: 'Carlos Lima', phone: '85999999999', email: 'carlos@example.com' });
+    assert.equal(clientResponse.status, 201);
+
+    const saleResponse = await request(app)
+      .post('/api/sales')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send({
+        clientId: clientResponse.body.client.id,
+        paymentMethod: 'avista',
+        items: [{ productId, quantity: 2 }],
+      });
+    assert.equal(saleResponse.status, 201);
+    assert.equal(saleResponse.body.sale.totalCents, 1500);
+    assert.equal(saleResponse.body.sale.paymentStatus, 'paga');
+
+    const products = await request(app)
+      .get('/api/products')
+      .set('Authorization', `Bearer ${admin.token}`);
+    assert.equal(products.body.products[0].stock, 3);
+
+    const report = await request(app)
+      .get(`/api/reports/sales?from=${new Date().toISOString().slice(0, 10)}&to=${new Date().toISOString().slice(0, 10)}`)
+      .set('Authorization', `Bearer ${admin.token}`);
+    assert.equal(report.status, 200);
+    assert.equal(report.body.summary.totalCents, 1500);
+    assert.equal(report.body.byClient[0].clientName, 'Carlos Lima');
+  });
+
+  it('registra venda a prazo, permite baixar o pagamento uma vez', async () => {
+    const admin = await register('Ana Silva', 'ana@example.com');
+    const productResponse = await createProduct(admin.token);
+    const saleResponse = await request(app)
+      .post('/api/sales')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send({
+        paymentMethod: 'prazo',
+        items: [{ productId: productResponse.body.product.id, quantity: 1 }],
+      });
+    assert.equal(saleResponse.status, 201);
+    assert.equal(saleResponse.body.sale.paymentStatus, 'pendente');
+
+    const settled = await request(app)
+      .post(`/api/sales/${saleResponse.body.sale.id}/settle`)
+      .set('Authorization', `Bearer ${admin.token}`);
+    assert.equal(settled.status, 200);
+
+    const duplicateSettlement = await request(app)
+      .post(`/api/sales/${saleResponse.body.sale.id}/settle`)
+      .set('Authorization', `Bearer ${admin.token}`);
+    assert.equal(duplicateSettlement.status, 409);
+
+    const history = await request(app)
+      .get('/api/sales')
+      .set('Authorization', `Bearer ${admin.token}`);
+    assert.equal(history.body.sales[0].paymentStatus, 'paga');
+  });
+
+  it('rejeita estoque insuficiente sem salvar uma venda parcial', async () => {
+    const admin = await register('Ana Silva', 'ana@example.com');
+    const productResponse = await createProduct(admin.token, { stock: 1 });
+    const saleResponse = await request(app)
+      .post('/api/sales')
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send({
+        paymentMethod: 'avista',
+        items: [{ productId: productResponse.body.product.id, quantity: 2 }],
+      });
+    assert.equal(saleResponse.status, 409);
+
+    const products = await request(app)
+      .get('/api/products')
+      .set('Authorization', `Bearer ${admin.token}`);
+    assert.equal(products.body.products[0].stock, 1);
+    const sales = await request(app)
+      .get('/api/sales')
+      .set('Authorization', `Bearer ${admin.token}`);
+    assert.deepEqual(sales.body.sales, []);
   });
 });
