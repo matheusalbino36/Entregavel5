@@ -66,7 +66,7 @@ npm test
 npm run dev
 ```
 
-O frontend abre normalmente em `http://localhost:5173` e encaminha `/api` ao servidor na porta 3001. Para executar a versão compilada:
+Em desenvolvimento, frontend e API compartilham `http://localhost:5173`; não é necessário iniciar outro servidor. Para executar a versão compilada:
 
 ```powershell
 npm run build

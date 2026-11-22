@@ -71,7 +71,7 @@ function parseDate(value, label) {
   return value;
 }
 
-export function createApp({ db, jwtSecret }) {
+export function createApp({ db, jwtSecret, serveFrontend = true }) {
   if (!db) throw new Error('A conexão com o banco de dados é obrigatória.');
   if (!jwtSecret) throw new Error('A chave JWT é obrigatória.');
 
@@ -415,15 +415,17 @@ export function createApp({ db, jwtSecret }) {
 
   app.use('/api', (_req, res) => res.status(404).json({ error: 'Rota não encontrada.' }));
 
-  const currentDir = path.dirname(fileURLToPath(import.meta.url));
-  const clientDist = path.resolve(currentDir, '../dist');
-  app.use(express.static(clientDist));
-  app.get(/.*/, (req, res, next) => {
-    if (req.accepts('html') === false) return next();
-    return res.sendFile(path.join(clientDist, 'index.html'), (error) => {
-      if (error) next();
+  if (serveFrontend) {
+    const currentDir = path.dirname(fileURLToPath(import.meta.url));
+    const clientDist = path.resolve(currentDir, '../dist');
+    app.use(express.static(clientDist));
+    app.get(/.*/, (req, res, next) => {
+      if (req.accepts('html') === false) return next();
+      return res.sendFile(path.join(clientDist, 'index.html'), (error) => {
+        if (error) next();
+      });
     });
-  });
+  }
 
   app.use((error, _req, res, _next) => {
     if (error instanceof HttpError) return res.status(error.status).json({ error: error.message });
