@@ -80,21 +80,27 @@ O banco local é criado em `data/vendas-cantina.db`. Configure `DB_PATH` para es
 
 Execute `npm test`. Os testes cobrem cadastro e perfis, autenticação/autorização, cadastro de produtos e clientes, vendas à vista e a prazo, baixa de pagamentos, relatórios e rollback em caso de estoque insuficiente.
 
-## Publicação na AWS EC2 (Ubuntu Linux)
+## Publicação na AWS EC2 (Amazon Linux 2023)
 
-1. Crie uma instância EC2 Ubuntu e uma chave para SSH. Verifique os custos estimados na AWS.
+1. Na criação da instância EC2, selecione a AMI **Amazon Linux 2023** (como na imagem do trabalho) e configure uma chave para SSH. Verifique os custos estimados na AWS.
 2. No grupo de segurança, permita SSH (`22`) somente a partir do seu IP e TCP `3001` para a demonstração.
-3. Clone este repositório na instância:
+3. Conecte por SSH como `ec2-user` e instale Git, ferramentas de compilação e Node.js 22:
 
    ```bash
-   sudo apt update
-   sudo apt install -y curl git build-essential
-   curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
-   sudo apt install -y nodejs
+   sudo dnf update -y
+   sudo dnf install -y curl git gcc-c++ make python3
+   curl -fsSL https://rpm.nodesource.com/setup_22.x | sudo bash -
+   sudo dnf install -y nodejs
    node --version
    npm --version
-   sudo git clone https://github.com/matheusalbino36/Entregavel5.git /opt/vendas-cantina
-   sudo chown -R ubuntu:ubuntu /opt/vendas-cantina
+   ```
+
+   Confirme que `node --version` indica Node.js 20 ou superior. Em seguida, clone e prepare a aplicação:
+
+   ```bash
+   sudo mkdir -p /opt/vendas-cantina
+   sudo chown ec2-user:ec2-user /opt/vendas-cantina
+   git clone https://github.com/matheusalbino36/Entregavel5.git /opt/vendas-cantina
    cd /opt/vendas-cantina
    npm install
    npm test
@@ -105,7 +111,7 @@ Execute `npm test`. Os testes cobrem cadastro e perfis, autenticação/autoriza�
 
    ```bash
    sudo mkdir -p /var/lib/vendas-cantina
-   sudo chown ubuntu:ubuntu /var/lib/vendas-cantina
+   sudo chown ec2-user:ec2-user /var/lib/vendas-cantina
    sudo install -m 600 /dev/null /etc/vendas-cantina.env
    sudo nano /etc/vendas-cantina.env
    ```

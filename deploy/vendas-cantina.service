@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 Type=simple
-User=ubuntu
+User=ec2-user
 WorkingDirectory=/opt/vendas-cantina
 Environment=NODE_ENV=production
 Environment=PORT=3001
