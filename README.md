@@ -129,12 +129,16 @@ Execute `npm test`. Os testes cobrem cadastro e perfis, autenticação/autoriza�
 6. Abra `http://IP-PÚBLICO-DA-EC2:3001`, crie a conta administradora, cadastre produtos e teste uma venda. Entregue a URL pública ao professor.
 
 A URL HTTP é apenas para demonstração acadêmica: use contas de teste, nunca reutilize senhas pessoais e não armazene dados reais. O SQLite fica no volume persistente da instância. Para uso real, configure HTTPS e controles adicionais.
+1.   Ambiente de Gestão, para controle das tarefas dos membros do time
 <img width="1600" height="1004" alt="Ambiente de gestão, para controle das tarefas dos membros do time  Por exemplo ClickUp, Trello, ProofHub, Planner, Jira" src="https://github.com/user-attachments/assets/b6d8f397-09ff-4760-be7a-22fef5425e34" />
-
-<img width="1600" height="759" alt="Ambiente de Testes Selenium" src="https://github.com/user-attachments/assets/18efd623-168d-445a-bed0-1de9b1b8d8eb" />
-<img width="1600" height="847" alt="Ambiente gestão de Banco de Dados Clientes MySQL, Firebase, SQLite" src="https://github.com/user-attachments/assets/e2870e7d-9e0f-4f10-93f1-60147be23890" />
-<img width="1600" height="852" alt="Ambiente de Desenvolvimento Visual Studio Code, PyCharm, Intellij" src="https://github.com/user-attachments/assets/0a7ac3cf-44ac-4598-9c18-ea858be10b19" />
+2.   Ambiente de Design de interfaces (UI/UX design tools). Por exemplo: Adobe XD, Figma, Sketch
 <img width="1600" height="605" alt="Ambiente de Design de interfaces (UIUX design tools)  Por exemplo Adobe XD, Figma, Sketch" src="https://github.com/user-attachments/assets/c243eba7-6cd5-418a-9c9d-a3f4db1659a0" />
+3.   Ambiente de Desenvolvimento: Visual Studio Code, PyCharm, Intellij
+<img width="1600" height="852" alt="Ambiente de Desenvolvimento Visual Studio Code, PyCharm, Intellij" src="https://github.com/user-attachments/assets/0a7ac3cf-44ac-4598-9c18-ea858be10b19" />
+4.   Abiente gestão de Banco de Dados: Clientes MySQL, Firebase, SQLite
+<img width="1600" height="847" alt="Ambiente gestão de Banco de Dados Clientes MySQL, Firebase, SQLite" src="https://github.com/user-attachments/assets/e2870e7d-9e0f-4f10-93f1-60147be23890" />
+5.   Ambiente de Testes Selenium
+<img width="1600" height="759" alt="Ambiente de Testes Selenium" src="https://github.com/user-attachments/assets/18efd623-168d-445a-bed0-1de9b1b8d8eb" />
+6.   Ambiente de Execução e servidores web
 <img width="1600" height="802" alt="Ambiente de Execução e servidores web - 1" src="https://github.com/user-attachments/assets/cb55f060-cb4f-483e-ad2c-8b8ba1a5c388" />
 <img width="1600" height="799" alt="Ambiente de Execução e servidores web - 2" src="https://github.com/user-attachments/assets/76d6b429-f8d5-49f5-b846-102cab9ab7a5" />
-
